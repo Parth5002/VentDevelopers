@@ -1,0 +1,9 @@
+Flask
+Flask-Migrate
+Flask-SQLAlchemy
+Flask-Paginate
+werkzeug
+pyodbc
+sqlalchemy
+json5
+pycryptodome

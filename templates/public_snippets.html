@@ -1,0 +1,99 @@
+<!-- Inside public_snippets.html -->
+{% extends "base.html" %}
+{% block body %}
+
+<div class="py-10 px-4">
+  <h2 class="text-2xl font-semibold mb-4">Public Snippets</h2>
+
+  <!-- Search Bar -->
+  <div class="flex justify-center mt-4">
+    <input id="snippetSearch" type="text" placeholder="Search snippets..." class="px-4 py-2 border rounded-md w-1/3">
+  </div>
+
+  <div class="flex justify-center mt-4">
+    <button id="sortByDateButton" class="mx-2 px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-md">
+      Sort by Latest
+    </button>
+    <button id="sortByTitleButton" class="mx-2 px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-md">
+      Sort by Name
+    </button>
+  </div>
+
+  <!-- Snippets List -->
+  <div id="snippetContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    {% for snippet in public_snippets %}
+      <div class="snippet-card bg-white shadow-md rounded-lg p-4 hover:shadow-lg" data-title="{{ snippet.title }}" data-date="{{ snippet.date_created }}">
+        <h3 class="snippet-title text-lg font-semibold mb-2">{{ snippet.title }}</h3>
+        <p class="snippet-description text-gray-600 mb-4">{{ snippet.description }}</p>
+
+        <!-- Check if snippet.user exists -->
+        <p>Created by: 
+          {% if snippet.user %}
+            {{ snippet.user.email.split('@')[0] }}
+          {% else %}
+            Unknown
+          {% endif %}
+        </p>
+
+        <!-- View Button -->
+        <a href="{{ url_for('view_snippet', snippet_id=snippet.id) }}" class="text-blue-500 hover:underline">View</a>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  // Search Bar
+  const snippetSearch = document.getElementById('snippetSearch');
+  const snippetCards = Array.from(document.querySelectorAll('.snippet-card'));
+  const snippetContainer = document.getElementById('snippetContainer');
+
+  // Filter snippets based on search input
+  snippetSearch.addEventListener('input', function () {
+    const query = snippetSearch.value.toLowerCase();
+    
+    snippetCards.forEach(card => {
+      const title = card.querySelector('.snippet-title').textContent.toLowerCase();
+      const description = card.querySelector('.snippet-description').textContent.toLowerCase();
+      
+      // Show/Hide snippets based on whether they match the search query
+      if (title.includes(query) || description.includes(query)) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  });
+
+  // Sort by date
+  const sortByDateButton = document.getElementById('sortByDateButton');
+  sortByDateButton.addEventListener('click', function () {
+    const sortedByDate = snippetCards.sort((a, b) => {
+      const dateA = new Date(a.getAttribute('data-date'));
+      const dateB = new Date(b.getAttribute('data-date'));
+      return dateB - dateA; // Sort in descending order (latest first)
+    });
+    displaySortedSnippets(sortedByDate);
+  });
+
+  // Sort by title
+  const sortByTitleButton = document.getElementById('sortByTitleButton');
+  sortByTitleButton.addEventListener('click', function () {
+    const sortedByTitle = snippetCards.sort((a, b) => {
+      const titleA = a.getAttribute('data-title').toLowerCase();
+      const titleB = b.getAttribute('data-title').toLowerCase();
+      return titleA.localeCompare(titleB); // Sort alphabetically by title
+    });
+    displaySortedSnippets(sortedByTitle);
+  });
+
+  // Function to display the sorted snippets
+  function displaySortedSnippets(sortedSnippets) {
+    snippetContainer.innerHTML = ''; // Clear the current snippets
+    sortedSnippets.forEach(card => {
+      snippetContainer.appendChild(card); // Append the sorted snippets back to the container
+    });
+  }
+</script>
+
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block body %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Editor</title>
+    <style>
+        /* Add your custom CSS styles here */
+        #editor {
+            height: 300px;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+    </style>
+</head>
+<body>
+    <h1>Code Editor</h1>
+
+    <!-- Code editor container -->
+    <div id="editor"></div>
+
+    <!-- Button container -->
+    <div class="buttons-container">
+        <button id="run-button" class="btn btn-success">Run</button>
+        <button id="save-button" class="btn btn-primary">Save</button>
+        <input type="file" id="file-input" accept=".py" style="display: none;">
+        <button id="open-button" class="btn btn-info">Open & Edit</button>
+    </div>
+
+    <!-- Output container with white background and white text -->
+    <div id="output-container" style="background-color: white; color: rgb(0, 0, 0);">
+        <h2>Output:</h2>
+        <iframe id="output-iframe" style="border: none; width: 100%; height: 300px;"></iframe>
+    </div>
+
+    <!-- Include Ace Editor library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+
+    <!-- JavaScript code for the editor -->
+    <script>
+        var editor = ace.edit("editor");
+        editor.setTheme("ace/theme/chrome");
+        editor.getSession().setMode("ace/mode/python");
+
+        // Initialize a variable to track the currently loaded file
+        var currentLoadedFile = null;
+
+        // Handle Open & Edit button click
+        document.getElementById("open-button").addEventListener("click", function () {
+            // Trigger a click event on the hidden file input
+            document.getElementById("file-input").click();
+        });
+
+        // Handle file input change event (when a file is selected)
+        document.getElementById("file-input").addEventListener("change", function (event) {
+            var selectedFile = event.target.files[0];
+
+            if (selectedFile) {
+                currentLoadedFile = selectedFile; // Track the currently loaded file
+                var reader = new FileReader();
+
+                // Define a callback function to handle file reading
+                reader.onload = function (e) {
+                    var fileContents = e.target.result;
+
+                    // Load the file contents into the code editor
+                    editor.setValue(fileContents);
+                };
+
+                // Read the selected file as text
+                reader.readAsText(selectedFile);
+            }
+        });
+
+        // Handle Save button click
+        document.getElementById("save-button").addEventListener("click", function () {
+            var code = editor.getValue();
+
+            if (currentLoadedFile) {
+                // If a file is currently loaded, save changes to the same file
+                saveChangesToFile(code, currentLoadedFile);
+            } else {
+                // If no file is loaded, prompt the user for a filename and save as a new file
+                promptForFilenameAndSave(code);
+            }
+        });
+
+        // Function to save changes to an existing file
+        function saveChangesToFile(code, file) {
+            var reader = new FileReader();
+            reader.onload = function () {
+                var fileContents = reader.result;
+
+                // Update the file contents with the changes
+                fileContents = code;
+
+                // Create a Blob with the updated contents
+                var updatedFile = new Blob([fileContents], { type: "text/plain" });
+
+                // Use the File API to write the Blob back to the same file
+                var writer = new FileWriter();
+                writer.write(updatedFile, file);
+
+                // Notify the user that changes have been saved
+                alert("Changes saved successfully.");
+            };
+            reader.readAsText(file);
+        }
+// Function to prompt for a filename and save as a new file
+function promptForFilenameAndSave(code) {
+    var filename = prompt("Enter a filename (without .py extension):");
+    if (filename !== null && filename.trim() !== "") {
+        // Ensure the filename has the .py extension
+        if (!filename.endsWith(".py")) {
+            filename += ".py";
+        }
+
+        // Create a Blob with the code
+        var newFile = new Blob([code], { type: "text/plain" });
+
+        // Specify the default directory path for saving
+        var defaultSavePath = "D:\\WEBSITES\\CODE-SNIPPET\\files\\python_editor\\" + filename;
+
+        // Use the File API to save the Blob as a new file
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(newFile);
+        a.download = filename;
+        a.style.display = "none";
+
+        // Set the default directory path
+        a.setAttribute("nwsaveas", defaultSavePath);
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // Notify the user that the file has been saved
+        alert("File saved successfully.");
+    } else {
+        // Handle cancellation or empty filename
+        alert("Invalid filename. Please enter a valid filename.");
+    }
+}
+
+
+        // Handle Run button click
+        document.getElementById("run-button").addEventListener("click", function () {
+            var code = editor.getValue();
+
+            // Create an EventSource to receive SSE updates from the server
+            var eventSource = new EventSource(`/run_code_sse?code=${encodeURIComponent(code)}`);
+
+            // Handle SSE messages (output from Python execution)
+            eventSource.onmessage = function(event) {
+                console.log("Received SSE event:", event.data); // Log the received SSE event
+                appendOutput(event.data);
+            };
+
+            // Handle SSE connection error
+            eventSource.onerror = function(event) {
+                console.error('SSE error:', event);
+                eventSource.close();
+            };
+        });
+
+        // Function to append output to the output iframe
+        function appendOutput(output) {
+            console.log("Received output:", output); // Log the received output
+            var outputIframe = document.getElementById("output-iframe");
+            var contentDocument = outputIframe.contentDocument || outputIframe.contentWindow.document;
+
+            // Check if the output is empty before appending
+            if (output.trim() !== "") {
+                // Append the output to the iframe with the desired style
+                contentDocument.write(`<pre style="background-color: white; color: black;">${output}</pre>`);
+                contentDocument.close();
+            }
+        }
+    </script>
+</body>
+</html>
+
+{% endblock %}
